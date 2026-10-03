@@ -1,1 +1,137 @@
 # multi-agent-app-
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Agent AI Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-4 flex flex-col items-center">
+
+    <div class="max-w-3xl w-full bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-700">
+        <h1 class="text-2xl font-bold text-center text-blue-400 mb-4">🤖 Multi-Agent AI Team Platform</h1>
+        
+        <!-- API Key Manager -->
+        <div class="mb-6 bg-gray-900 p-4 rounded border border-gray-700">
+            <label class="block text-sm font-medium mb-2 text-gray-300">
+                আপনার Gemini API Keys (কমা (`,`) দিয়ে অথবা নতুন লাইনে ৫০–১০০টি পেস্ট করুন):
+            </label>
+            <textarea id="apiKeysInput" rows="3" class="w-full p-2 bg-gray-800 border border-gray-600 rounded text-sm text-green-400 focus:outline-none focus:border-blue-500" placeholder="AIzaSyA..., AIzaSyB..., AIzaSyC..."></textarea>
+            <div class="text-xs text-gray-400 mt-1 flex justify-between">
+                <span>* রিকোয়েস্ট অনুযায়ী অটোমেটিক Key Rotate হবে।</span>
+                <span id="keyCount" class="text-blue-400 font-bold">0 Keys Loaded</span>
+            </div>
+        </div>
+
+        <!-- Task Input -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-2 text-gray-300">আপনার টাস্ক লিখুন (যেমন: কোডিং, আর্টিকেলিং, প্রজেক্ট প্ল্যান):</label>
+            <textarea id="userPrompt" rows="3" class="w-full p-3 bg-gray-900 border border-gray-700 rounded text-white focus:outline-none focus:border-blue-500" placeholder="যেমন: একটি অনলাইন শপের জন্য পূর্ণাঙ্গ HTML/CSS/JS কোড তৈরি করে দাও..."></textarea>
+        </div>
+
+        <button onclick="startMultiAgentTask()" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 font-bold py-3 rounded transition duration-200">
+            🚀 এআই টিমওয়ার্ক শুরু করুন
+        </button>
+
+        <!-- Live Progress Status -->
+        <div id="statusContainer" class="mt-6 hidden">
+            <h3 class="text-sm font-semibold text-gray-400 mb-2">টিমের কাজের আপডেট:</h3>
+            <div id="agentStatus" class="space-y-2 text-sm"></div>
+        </div>
+
+        <!-- Output Result -->
+        <div id="outputContainer" class="mt-6 hidden">
+            <h3 class="text-lg font-bold text-green-400 mb-2">ফাইনাল রেজাল্ট:</h3>
+            <pre id="finalOutput" class="bg-gray-900 p-4 rounded border border-gray-700 whitespace-pre-wrap font-mono text-xs text-gray-200 overflow-x-auto"></pre>
+        </div>
+    </div>
+
+    <script>
+        let currentKeyIndex = 0;
+
+        function getApiKeys() {
+            const rawInput = document.getElementById('apiKeysInput').value;
+            const keys = rawInput.split(/[\n,]+/).map(k => k.trim()).filter(k => k.length > 0);
+            document.getElementById('keyCount').innerText = `${keys.length} Keys Loaded`;
+            return keys;
+        }
+
+        document.getElementById('apiKeysInput').addEventListener('input', getApiKeys);
+
+        function getNextApiKey(keys) {
+            if (keys.length === 0) return null;
+            const key = keys[currentKeyIndex];
+            currentKeyIndex = (currentKeyIndex + 1) % keys.length; // Key rotation
+            return key;
+        }
+
+        async function callGemini(prompt, systemInstruction, apiKey) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: `${systemInstruction}\n\nTask: ${prompt}` }] }]
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+            return data.candidates[0].content.parts[0].text;
+        }
+
+        async function startMultiAgentTask() {
+            const keys = getApiKeys();
+            const prompt = document.getElementById('userPrompt').value.trim();
+
+            if (keys.length === 0) {
+                alert("অনুগ্ৰহ করে অন্তত ১টি API Key প্রবেশ করান!");
+                return;
+            }
+            if (!prompt) {
+                alert("টাস্কের বিবরণ লিখুন!");
+                return;
+            }
+
+            const statusBox = document.getElementById('statusContainer');
+            const statusDiv = document.getElementById('agentStatus');
+            const outputBox = document.getElementById('outputContainer');
+            const finalOutput = document.getElementById('finalOutput');
+            const submitBtn = document.getElementById('submitBtn');
+
+            statusBox.classList.remove('hidden');
+            outputBox.classList.add('hidden');
+            submitBtn.disabled = true;
+            statusDiv.innerHTML = '';
+
+            try {
+                // Agent 1: Primary Coder / Specialist
+                statusDiv.innerHTML += `<div class="text-yellow-400">⚡ [Agent 1 - Specialist]: টাস্ক প্রসেস করছে (Key Index: ${currentKeyIndex})...</div>`;
+                const key1 = getNextApiKey(keys);
+                const draft = await callGemini(prompt, "You are an expert developer and creator. Write the complete core solution or code.", key1);
+
+                // Agent 2: Code Reviewer & Critic
+                statusDiv.innerHTML += `<div class="text-blue-400">🔍 [Agent 2 - Reviewer]: আগের আউটপুট রিভিউ ও অপ্টিমাইজ করছে (Key Index: ${currentKeyIndex})...</div>`;
+                const key2 = getNextApiKey(keys);
+                const reviewPrompt = `Original Task: ${prompt}\n\nDraft Solution:\n${draft}`;
+                const review = await callGemini(reviewPrompt, "You are a lead reviewer. Find bugs, improve quality, and refine the solution.", key2);
+
+                // Agent 3: Synthesizer & Manager
+                statusDiv.innerHTML += `<div class="text-green-400">✨ [Agent 3 - Manager]: চূড়ান্ত ফিনিশিং দিচ্ছে (Key Index: ${currentKeyIndex})...</div>`;
+                const key3 = getNextApiKey(keys);
+                const finalPrompt = `Task: ${prompt}\n\nDraft:\n${draft}\n\nReview Notes:\n${review}`;
+                const result = await callGemini(finalPrompt, "Synthesize everything into the perfect, cleanest final output.", key3);
+
+                finalOutput.innerText = result;
+                outputBox.classList.remove('hidden');
+                statusDiv.innerHTML += `<div class="text-green-500 font-bold">✅ কাজ সম্পূর্ণ হয়েছে!</div>`;
+
+            } catch (err) {
+                statusDiv.innerHTML += `<div class="text-red-500">❌ এরর: ${err.message}</div>`;
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
