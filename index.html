@@ -1,69 +1,123 @@
-
 <!DOCTYPE html>
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Agent AI Studio</title>
+    <title>AI Multi-Agent Chatbot</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-gray-900 text-white min-h-screen p-4 flex flex-col items-center">
+<body class="bg-gray-900 text-gray-100 h-screen flex flex-col font-sans">
 
-    <div class="max-w-3xl w-full bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-700">
-        <h1 class="text-2xl font-bold text-center text-blue-400 mb-4">🤖 Multi-Agent AI Team Platform</h1>
-        
-        <!-- API Key Manager -->
-        <div class="mb-6 bg-gray-900 p-4 rounded border border-gray-700">
-            <label class="block text-sm font-medium mb-2 text-gray-300">
-                আপনার Gemini API Keys (কমা (`,`) দিয়ে অথবা নতুন লাইনে ৫০–১০০টি পেস্ট করুন):
-            </label>
-            <textarea id="apiKeysInput" rows="3" class="w-full p-2 bg-gray-800 border border-gray-600 rounded text-sm text-green-400 focus:outline-none focus:border-blue-500" placeholder="AIzaSyA..., AIzaSyB..., AIzaSyC..."></textarea>
-            <div class="text-xs text-gray-400 mt-1 flex justify-between">
-                <span>* রিকোয়েস্ট অনুযায়ী অটোমেটিক Key Rotate হবে।</span>
-                <span id="keyCount" class="text-blue-400 font-bold">0 Keys Loaded</span>
+    <!-- Top Header -->
+    <header class="bg-gray-800 border-b border-gray-700 px-4 py-3 flex justify-between items-center shadow-md">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600 p-2 rounded-lg text-white">
+                <i class="fa-solid fa-robot text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight">Multi-Agent AI Studio</h1>
+                <p class="text-xs text-green-400" id="keyStatusDisplay">0 API Keys Loaded</p>
             </div>
         </div>
-
-        <!-- Task Input -->
-        <div class="mb-4">
-            <label class="block text-sm font-medium mb-2 text-gray-300">আপনার টাস্ক লিখুন (যেমন: কোডিং, আর্টিকেলিং, প্রজেক্ট প্ল্যান):</label>
-            <textarea id="userPrompt" rows="3" class="w-full p-3 bg-gray-900 border border-gray-700 rounded text-white focus:outline-none focus:border-blue-500" placeholder="যেমন: একটি অনলাইন শপের জন্য পূর্ণাঙ্গ HTML/CSS/JS কোড তৈরি করে দাও..."></textarea>
-        </div>
-
-        <button onclick="startMultiAgentTask()" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 font-bold py-3 rounded transition duration-200">
-            🚀 এআই টিমওয়ার্ক শুরু করুন
+        <button onclick="toggleSettingsModal()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-2 rounded-lg text-sm flex items-center gap-2 border border-gray-600 transition">
+            <i class="fa-solid fa-gear"></i> Settings
         </button>
+    </header>
 
-        <!-- Live Progress Status -->
-        <div id="statusContainer" class="mt-6 hidden">
-            <h3 class="text-sm font-semibold text-gray-400 mb-2">টিমের কাজের আপডেট:</h3>
-            <div id="agentStatus" class="space-y-2 text-sm"></div>
+    <!-- Chat Container -->
+    <main id="chatBox" class="flex-1 overflow-y-auto p-4 space-y-4 max-w-4xl mx-auto w-full">
+        <!-- Welcome Message -->
+        <div class="flex gap-3 my-4">
+            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0 text-white text-xs font-bold">AI</div>
+            <div class="bg-gray-800 border border-gray-700 p-4 rounded-2xl rounded-tl-none max-w-[85%] text-sm leading-relaxed shadow-sm">
+                হ্যালো! আমি আপনার Multi-Agent AI অ্যাসিস্ট্যান্ট। ওপরে ⚙️ **Settings** বাটনে গিয়ে আপনার Gemini API Key-গুলো বসিয়ে দিন, এরপর যেকোনো টাস্ক মেসেজ পাঠিয়ে দিন!
+            </div>
         </div>
+    </main>
 
-        <!-- Output Result -->
-        <div id="outputContainer" class="mt-6 hidden">
-            <h3 class="text-lg font-bold text-green-400 mb-2">ফাইনাল রেজাল্ট:</h3>
-            <pre id="finalOutput" class="bg-gray-900 p-4 rounded border border-gray-700 whitespace-pre-wrap font-mono text-xs text-gray-200 overflow-x-auto"></pre>
+    <!-- Input Area -->
+    <footer class="p-4 bg-gray-900 border-t border-gray-800">
+        <div class="max-w-4xl mx-auto flex gap-2 items-center bg-gray-800 p-2 rounded-xl border border-gray-700 shadow-inner">
+            <textarea id="userInput" rows="1" class="flex-1 bg-transparent border-none text-sm text-white focus:outline-none resize-none px-2 max-h-32" placeholder="মেসেজ লিখুন (যেমন: Build a responsive navbar code)..." onkeydown="handleKeyPress(event)"></textarea>
+            <button onclick="sendMessage()" id="sendBtn" class="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-lg transition shrink-0 flex items-center justify-center w-10 h-10">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
+    </footer>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 border border-gray-700 w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+            <h2 class="text-xl font-bold mb-2 text-white flex items-center gap-2">
+                <i class="fa-solid fa-key text-blue-400"></i> API Keys Settings
+            </h2>
+            <p class="text-xs text-gray-400 mb-4">কমা (`,`) দিয়ে অথবা নতুন লাইনে ৫০-১০০টি Gemini API Key পেস্ট করুন:</p>
+            
+            <textarea id="apiKeysInput" rows="6" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs font-mono text-green-400 focus:outline-none focus:border-blue-500 mb-4" placeholder="AIzaSyA...,&#10;AIzaSyB...,&#10;AIzaSyC..."></textarea>
+            
+            <div class="flex justify-end gap-2">
+                <button onclick="toggleSettingsModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition">
+                    Save & Close
+                </button>
+            </div>
         </div>
     </div>
 
     <script>
         let currentKeyIndex = 0;
 
-        function getApiKeys() {
-            const rawInput = document.getElementById('apiKeysInput').value;
-            const keys = rawInput.split(/[\n,]+/).map(k => k.trim()).filter(k => k.length > 0);
-            document.getElementById('keyCount').innerText = `${keys.length} Keys Loaded`;
-            return keys;
+        function toggleSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            modal.classList.toggle('hidden');
+            updateKeyCount();
         }
 
-        document.getElementById('apiKeysInput').addEventListener('input', getApiKeys);
+        function getApiKeys() {
+            const raw = document.getElementById('apiKeysInput').value;
+            return raw.split(/[\n,]+/).map(k => k.trim()).filter(k => k.length > 0);
+        }
+
+        function updateKeyCount() {
+            const keys = getApiKeys();
+            document.getElementById('keyStatusDisplay').innerText = `${keys.length} API Keys Loaded`;
+        }
+
+        document.getElementById('apiKeysInput').addEventListener('input', updateKeyCount);
 
         function getNextApiKey(keys) {
             if (keys.length === 0) return null;
             const key = keys[currentKeyIndex];
-            currentKeyIndex = (currentKeyIndex + 1) % keys.length; // Key rotation
+            currentKeyIndex = (currentKeyIndex + 1) % keys.length;
             return key;
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function appendMessage(sender, text, isUser = false, bgClass = "bg-gray-800") {
+            const chatBox = document.getElementById('chatBox');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `flex gap-3 my-3 ${isUser ? 'justify-end' : ''}`;
+
+            const userIcon = `<div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center shrink-0 text-white text-xs font-bold">You</div>`;
+            const aiIcon = `<div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0 text-white text-xs font-bold">AI</div>`;
+
+            msgDiv.innerHTML = `
+                ${!isUser ? aiIcon : ''}
+                <div class="${isUser ? 'bg-blue-600 text-white rounded-tr-none' : bgClass + ' border border-gray-700 text-gray-200 rounded-tl-none'} p-4 rounded-2xl max-w-[85%] text-sm leading-relaxed shadow-sm whitespace-pre-wrap font-mono">
+                    ${sender ? `<strong class="block text-xs mb-1 text-blue-400 font-sans">${sender}</strong>` : ''}${text}
+                </div>
+                ${isUser ? userIcon : ''}
+            `;
+
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return msgDiv;
         }
 
         async function callGemini(prompt, systemInstruction, apiKey) {
@@ -80,56 +134,41 @@
             return data.candidates[0].content.parts[0].text;
         }
 
-        async function startMultiAgentTask() {
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const prompt = input.value.trim();
             const keys = getApiKeys();
-            const prompt = document.getElementById('userPrompt').value.trim();
 
+            if (!prompt) return;
             if (keys.length === 0) {
-                alert("অনুগ্ৰহ করে অন্তত ১টি API Key প্রবেশ করান!");
-                return;
-            }
-            if (!prompt) {
-                alert("টাস্কের বিবরণ লিখুন!");
+                alert("অনুগ্ৰহ করে ওপরে ⚙️ Settings-এ গিয়ে অন্তত ১টি API Key দিন!");
+                toggleSettingsModal();
                 return;
             }
 
-            const statusBox = document.getElementById('statusContainer');
-            const statusDiv = document.getElementById('agentStatus');
-            const outputBox = document.getElementById('outputContainer');
-            const finalOutput = document.getElementById('finalOutput');
-            const submitBtn = document.getElementById('submitBtn');
+            appendMessage(null, prompt, true);
+            input.value = '';
 
-            statusBox.classList.remove('hidden');
-            outputBox.classList.add('hidden');
-            submitBtn.disabled = true;
-            statusDiv.innerHTML = '';
+            const statusMsg = appendMessage("🤖 Multi-Agent Team Status", "টিম টাস্ক শুরু করছে...", false, "bg-gray-800");
 
             try {
-                // Agent 1: Primary Coder / Specialist
-                statusDiv.innerHTML += `<div class="text-yellow-400">⚡ [Agent 1 - Specialist]: টাস্ক প্রসেস করছে (Key Index: ${currentKeyIndex})...</div>`;
-                const key1 = getNextApiKey(keys);
-                const draft = await callGemini(prompt, "You are an expert developer and creator. Write the complete core solution or code.", key1);
+                // Agent 1
+                statusMsg.querySelector('div').innerText = "⚡ Agent 1 (Specialist): খসড়া তৈরি করছে...";
+                const draft = await callGemini(prompt, "You are an expert creator. Generate the core output.", getNextApiKey(keys));
 
-                // Agent 2: Code Reviewer & Critic
-                statusDiv.innerHTML += `<div class="text-blue-400">🔍 [Agent 2 - Reviewer]: আগের আউটপুট রিভিউ ও অপ্টিমাইজ করছে (Key Index: ${currentKeyIndex})...</div>`;
-                const key2 = getNextApiKey(keys);
-                const reviewPrompt = `Original Task: ${prompt}\n\nDraft Solution:\n${draft}`;
-                const review = await callGemini(reviewPrompt, "You are a lead reviewer. Find bugs, improve quality, and refine the solution.", key2);
+                // Agent 2
+                statusMsg.querySelector('div').innerText = "🔍 Agent 2 (Reviewer): রিভিউ ও বাগ ফিক্স করছে...";
+                const review = await callGemini(`Task: ${prompt}\nDraft: ${draft}`, "You are a reviewer. Improve and refine.", getNextApiKey(keys));
 
-                // Agent 3: Synthesizer & Manager
-                statusDiv.innerHTML += `<div class="text-green-400">✨ [Agent 3 - Manager]: চূড়ান্ত ফিনিশিং দিচ্ছে (Key Index: ${currentKeyIndex})...</div>`;
-                const key3 = getNextApiKey(keys);
-                const finalPrompt = `Task: ${prompt}\n\nDraft:\n${draft}\n\nReview Notes:\n${review}`;
-                const result = await callGemini(finalPrompt, "Synthesize everything into the perfect, cleanest final output.", key3);
+                // Agent 3
+                statusMsg.querySelector('div').innerText = "✨ Agent 3 (Manager): চূড়ান্ত আউটপুট তৈরি করছে...";
+                const result = await callGemini(`Task: ${prompt}\nDraft: ${draft}\nReview: ${review}`, "Synthesize everything into the perfect final output.", getNextApiKey(keys));
 
-                finalOutput.innerText = result;
-                outputBox.classList.remove('hidden');
-                statusDiv.innerHTML += `<div class="text-green-500 font-bold">✅ কাজ সম্পূর্ণ হয়েছে!</div>`;
+                statusMsg.remove();
+                appendMessage("🤖 AI Agent Team Result", result, false, "bg-gray-800");
 
             } catch (err) {
-                statusDiv.innerHTML += `<div class="text-red-500">❌ এরর: ${err.message}</div>`;
-            } finally {
-                submitBtn.disabled = false;
+                statusMsg.querySelector('div').innerText = `❌ Error: ${err.message}`;
             }
         }
     </script>
